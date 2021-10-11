@@ -46,4 +46,8 @@ app.post("/participantes", (req, res) => {
   res.send(createUser(name));
 });
 
+app.get("/participantes", (req, res) => {
+  res.send(participants);
+});
+
 app.listen(4000); // start server
