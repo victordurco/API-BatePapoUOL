@@ -29,13 +29,13 @@ const createMessage = (from, to, text, type) => {
     to,
     text,
     type,
-    time: dayjs().format("hh-mm-ss"),
+    time: dayjs().format("hh:mm:ss"),
   };
   messages.push(msg);
   return msg;
 };
 
-app.post("/participantes", (req, res) => {
+app.post("/participants", (req, res) => {
   const name = req.body;
   if (!nameIsValid(name.name)) {
     res.status(400);
@@ -46,8 +46,12 @@ app.post("/participantes", (req, res) => {
   res.send(createUser(name));
 });
 
-app.get("/participantes", (req, res) => {
+app.get("/participants", (req, res) => {
   res.send(participants);
+});
+
+app.get("/messages", (req, res) => {
+  res.send(messages);
 });
 
 app.listen(4000); // start server
