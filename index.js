@@ -80,7 +80,18 @@ app.post("/messages", (req, res) => {
 });
 
 app.get("/messages", (req, res) => {
+  const { user } = req.headers;
+  const { limit } = req.query;
   res.send(messages);
+});
+
+app.post("/status", (req, res) => {
+  const { user } = req.headers;
+  if (!findParticipant(user)) res.sendStatus(400);
+  participants.forEach((p) => {
+    if (p.name === user) p.lastStatus = Date.now();
+  });
+  res.sendStatus(200);
 });
 
 app.listen(4000); // start server
