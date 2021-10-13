@@ -94,11 +94,10 @@ app.get("/messages", (req, res) => {
 });
 
 app.post("/status", (req, res) => {
-  const { user } = req.headers;
+  const  user  = req.headers.user;
   if (!participantExist(user)) res.sendStatus(400);
-  participants.forEach((p) => {
-    if (p.name === user) p.lastStatus = Date.now();
-  });
+  const participant = participants.find(p => p.name === user);
+  participant.lastStatus = Date.now();
   res.sendStatus(200);
 });
 
