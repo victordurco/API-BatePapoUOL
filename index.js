@@ -29,7 +29,7 @@ const createStatusMessage = (from, to, text) => {
     to,
     text,
     type: "status",
-    time: dayjs().format("hh:mm:ss"),
+    time: dayjs().format("HH:mm:ss"),
   };
   messages.push(msg);
   return msg;
@@ -41,20 +41,20 @@ const messageIsValid = (msg) => {
   return true;
 };
 
-const findParticipant = (name) => {
-  const found = participants.find((p) => p.name === name);
-  if (found) return true;
-  else return false;
+const participantExist = (name) => {
+  const found = participants.some((p) => p.name === name);
+  return found;
 };
 
 //SERVER ROUTES
 app.post("/participants", (req, res) => {
-  const name = req.body;
-  if (isEmptyString(name.name)) {
+  const { name } = req.body;
+  if (isEmptyString(name) || !name) {
     res.status(400);
     res.send("the name cannot be empty");
+    return;
   }
-  createStatusMessage(name.name, "Todos", "entra na sala...");
+  createStatusMessage(name, "Todos", "entra na sala...");
   res.status(200);
   res.send(createUser(name));
 });
@@ -66,28 +66,36 @@ app.get("/participants", (req, res) => {
 app.post("/messages", (req, res) => {
   const from = req.headers.user;
   const { to, text, type } = req.body;
+  if (!to || !text || !type)
   const msg = {
     from,
     to,
     text,
     type,
-    time: dayjs().format("hh:mm:ss"),
+    time: dayjs().format("HH:mm:ss"),
   };
-  if (messageIsValid(msg) && findParticipant(from)) {
+
+  if (messageIsValid(msg) && participantExist(from)) {
     messages.push(msg);
     res.sendStatus(200);
   } else res.sendStatus(400);
 });
 
 app.get("/messages", (req, res) => {
-  const { user } = req.headers;
-  const { limit } = req.query;
-  res.send(messages);
+  const  user  = req.headers.user;
+  const  limit  = req.query.limit;
+  const filteredMessages = messages.filter( msg => {
+    const privateMessages = msg.type === 'private_message';
+    const userMessage = msg.to === user || msg.from === user;
+    return !privateMessages || userMessage;
+  });
+  const limitedMessages = filteredMessages.slice(-limit);
+  res.send(limitedMessages);
 });
 
 app.post("/status", (req, res) => {
   const { user } = req.headers;
-  if (!findParticipant(user)) res.sendStatus(400);
+  if (!participantExist(user)) res.sendStatus(400);
   participants.forEach((p) => {
     if (p.name === user) p.lastStatus = Date.now();
   });
