@@ -6,7 +6,7 @@ const app = express(); // create server
 app.use(express.json());
 app.use(cors());
 
-const participants = [];
+let participants = [];
 const messages = [];
 
 const isEmptyString = (name) => {
@@ -16,17 +16,17 @@ const isEmptyString = (name) => {
 
 const createUser = (name) => {
   const user = {
-    ...name,
+    name,
     lastStatus: Date.now(),
   };
   participants.push(user);
   return user;
 };
 
-const createStatusMessage = (from, to, text) => {
+const createStatusMessage = (from, text) => {
   const msg = {
     from,
-    to,
+    to: "Todos",
     text,
     type: "status",
     time: dayjs().format("HH:mm:ss"),
@@ -48,15 +48,25 @@ const participantExist = (name) => {
 
 //SERVER ROUTES
 app.post("/participants", (req, res) => {
-  const { name } = req.body;
-  if (isEmptyString(name) || !name) {
+  let available = true;
+  const name = req.body;
+  if (isEmptyString(name.name) || !name) {
     res.status(400);
     res.send("the name cannot be empty");
     return;
   }
-  createStatusMessage(name, "Todos", "entra na sala...");
-  res.status(200);
-  res.send(createUser(name));
+  participants.forEach((p) => {
+    if (participantExist(name.name)) {
+      available = false;
+    }
+  });
+  if (available) {
+    createStatusMessage(name, "entra na sala...");
+    res.status(200);
+    res.send(createUser(name.name));
+  } else {
+    res.sendStatus(409);
+  }
 });
 
 app.get("/participants", (req, res) => {
@@ -66,7 +76,7 @@ app.get("/participants", (req, res) => {
 app.post("/messages", (req, res) => {
   const from = req.headers.user;
   const { to, text, type } = req.body;
-  if (!to || !text || !type)
+  if (!to || !text || !type) res.sendStatus(400);
   const msg = {
     from,
     to,
@@ -82,10 +92,10 @@ app.post("/messages", (req, res) => {
 });
 
 app.get("/messages", (req, res) => {
-  const  user  = req.headers.user;
-  const  limit  = req.query.limit;
-  const filteredMessages = messages.filter( msg => {
-    const privateMessages = msg.type === 'private_message';
+  const user = req.headers.user;
+  const limit = req.query.limit;
+  const filteredMessages = messages.filter((msg) => {
+    const privateMessages = msg.type === "private_message";
     const userMessage = msg.to === user || msg.from === user;
     return !privateMessages || userMessage;
   });
@@ -94,11 +104,22 @@ app.get("/messages", (req, res) => {
 });
 
 app.post("/status", (req, res) => {
-  const  user  = req.headers.user;
+  const user = req.headers.user;
   if (!participantExist(user)) res.sendStatus(400);
-  const participant = participants.find(p => p.name === user);
+  const participant = participants.find((p) => p.name === user);
   participant.lastStatus = Date.now();
   res.sendStatus(200);
 });
+
+setInterval(() => {
+  const now = Date.now();
+  const expiredParticipants = participants.filter((p) => {
+    if (now - p.lastStatus >= 15000) return true;
+  });
+  expiredParticipants.forEach((p) => {
+    createStatusMessage(p.name, "sai da sala...");
+  });
+  participants = participants.filter((p) => !expiredParticipants.includes(p));
+}, 15000);
 
 app.listen(4000); // start server
